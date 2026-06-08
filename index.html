@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Hygienický checklist – Hotel Demänová</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b22; --card2:#1f232c; --line:#2a2f3a;
+    --txt:#e8eaf0; --muted:#8a91a0; --accent:#3da9fc; --ok:#27c08a; --bad:#ff5d5d;
+    --warn:#f5a623; --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:16px;line-height:1.4;}
+  .wrap{max-width:680px;margin:0 auto;padding:14px 14px 90px;}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0f1115 70%,rgba(15,17,21,0));
+    padding-top:6px;margin:-14px -14px 10px;padding-left:14px;padding-right:14px;}
+  .title{font-size:18px;font-weight:700;letter-spacing:.3px;}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  label.fl{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;}
+  input[type=text],input[type=date],textarea,select{
+    width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    border-radius:10px;padding:11px 12px;font-size:15px;outline:none;font-family:inherit;
+    height:44px;-webkit-appearance:none;appearance:none;}
+  textarea{height:auto;}
+  input[type=date]{min-width:0;}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px;align-items:end;}
+  .shift-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px;}
+  .shift-sel button{background:var(--card2);border:1px solid var(--line);color:var(--muted);
+    padding:11px;border-radius:11px;font-size:14px;font-weight:700;height:44px;}
+  .shift-sel button.active{background:var(--accent);color:#04121f;border-color:var(--accent);}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+  textarea{resize:vertical;min-height:54px;}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 4px;}
+  .tab{background:var(--card);border:1px solid var(--line);color:var(--muted);
+    padding:11px 10px;border-radius:11px;font-size:13px;font-weight:600;
+    white-space:nowrap;text-align:center;}
+  .tab.active{background:var(--accent);color:#04121f;border-color:var(--accent);}
+  section.panel{display:none;}
+  section.panel.active{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin:10px 0;}
+  .card h3{margin:0 0 10px;font-size:14px;font-weight:700;color:var(--txt);}
+  .card h3 .cnt{float:right;font-size:11px;color:var(--muted);font-weight:500;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 0;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .name{font-size:14px;flex:1;min-width:0;}
+  .row .name small{display:block;color:var(--muted);font-size:11px;margin-top:1px;}
+  .range{display:inline-block;background:var(--card2);border:1px solid var(--line);
+    border-radius:6px;padding:1px 7px;font-size:11px;color:var(--accent);margin-top:3px;font-weight:600;}
+  .temp-in{width:62px;height:34px;text-align:center;padding:0 4px;font-size:14px;
+    background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:9px;flex:0 0 auto;}
+  .temp-in.bad{border-color:var(--bad);color:var(--bad);}
+  .temp-in.ok{border-color:var(--ok);}
+  .seg{display:flex;gap:4px;flex:0 0 auto;}
+  .seg button{background:var(--card2);border:1px solid var(--line);color:var(--muted);
+    width:42px;height:34px;border-radius:9px;font-size:13px;font-weight:700;}
+  .seg button.on-ok{background:var(--ok);border-color:var(--ok);color:#042;}
+  .seg button.on-bad{background:var(--bad);border-color:var(--bad);color:#400;}
+  .chk{width:30px;height:30px;border-radius:8px;border:2px solid var(--line);
+    background:var(--card2);flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    font-size:17px;color:transparent;}
+  .chk.on{background:var(--ok);border-color:var(--ok);color:#042;}
+  .supplier-list .row .name{font-weight:600;}
+  .note-in{margin-top:8px;}
+  .accordion{border:1px solid var(--line);border-radius:10px;margin:8px 0;overflow:hidden;}
+  .accordion summary{padding:12px 14px;font-size:13px;font-weight:600;cursor:pointer;
+    list-style:none;background:var(--card2);color:var(--accent);}
+  .accordion summary::-webkit-details-marker{display:none;}
+  .accordion[open] summary{border-bottom:1px solid var(--line);}
+  .accordion .body{padding:12px 14px;font-size:13px;color:var(--muted);line-height:1.55;}
+  .accordion .body p{margin:0 0 8px;}
+  .accordion .body b{color:var(--txt);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .chip{background:var(--card2);border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;font-size:12px;color:var(--muted);}
+  .fab{position:fixed;bottom:0;left:0;right:0;background:rgba(15,17,21,.92);
+    backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 14px;
+    display:flex;gap:8px;z-index:30;}
+  .fab .wrapb{max-width:680px;margin:0 auto;display:flex;gap:8px;width:100%;}
+  .btn{flex:1;border:none;border-radius:11px;padding:13px;font-size:14px;font-weight:700;}
+  .btn.primary{background:var(--accent);color:#04121f;}
+  .btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);}
+  .progress{height:5px;background:var(--card2);border-radius:99px;overflow:hidden;margin:8px 0 2px;}
+  .progress > i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s;}
+  .history-item{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+    padding:12px;margin:8px 0;font-size:13px;}
+  .history-item .h{display:flex;justify-content:space-between;font-weight:700;font-size:14px;}
+  .history-item .h .pct{color:var(--ok);}
+  .history-item .actions{display:flex;gap:8px;margin-top:8px;}
+  .history-item .actions button{flex:1;font-size:12px;padding:8px;border-radius:8px;
+    border:1px solid var(--line);background:var(--card);color:var(--txt);}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px;}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#000;
+    border:1px solid var(--line);color:#fff;padding:11px 18px;border-radius:99px;font-size:13px;
+    z-index:50;opacity:0;transition:.25s;pointer-events:none;}
+  .toast.show{opacity:1;bottom:90px;}
+  @media print{
+    @page{size:A4 portrait;margin:9mm;}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body{background:#fff;color:#000;}
+    .wrap > *{display:none!important;}
+    #printArea{display:block!important;font-size:9px;line-height:1.3;color:#000;}
+    #printArea .pa-title{font-size:14px;font-weight:700;}
+    #printArea .pa-sub{font-size:10px;margin-top:1px;}
+    #printArea .pa-meta{font-size:11px;margin:4px 0 6px;padding:5px 0;
+      border-top:1px solid #000;border-bottom:1px solid #000;display:flex;
+      justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    #printArea .pa-meta b{font-weight:700;}
+    #printArea .pa-grid{column-count:2;column-gap:10px;}
+    #printArea .pa-card{break-inside:avoid;border:1px solid #999;border-radius:4px;
+      padding:5px 7px;margin:0 0 7px;display:inline-block;width:100%;box-sizing:border-box;}
+    #printArea .pa-card h4{margin:0 0 3px;font-size:10px;border-bottom:1px solid #ccc;padding-bottom:2px;}
+    #printArea .pa-row{display:flex;justify-content:space-between;align-items:center;
+      padding:2px 0;border-bottom:1px solid #eee;font-size:9px;}
+    #printArea .pa-row:last-child{border-bottom:none;}
+    #printArea .pa-row .rng{color:#555;font-size:8px;margin-left:4px;}
+    #printArea .mk{width:15px;height:15px;border:1px solid #000;border-radius:3px;
+      display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:0 0 auto;}
+    #printArea .mk.ok{background:#2a7;color:#fff;border-color:#2a7;}
+    #printArea .mk.bad{background:#d33;color:#fff;border-color:#d33;}
+    #printArea .pa-note{font-size:9px;margin-top:3px;}
+    #printArea .pa-note b{display:block;}
+    #printArea .pa-sign{display:flex;justify-content:space-between;margin-top:8px;
+      padding-top:6px;border-top:1px solid #000;font-size:10px;}
+  }
+  #printArea{display:none;}
+  #printHead,.print-sign{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title">Hygienický a sanitačný program</div>
+    <div class="sub">Hotel Demänová — denný kontrolný záznam <span id="cloudDot"></span></div>
+    <div class="meta">
+      <div>
+        <label class="fl">Dátum</label>
+        <input type="date" id="m_datum">
+      </div>
+      <div>
+        <label class="fl">Zodpovedná osoba</label>
+        <input type="text" id="m_osoba" placeholder="Meno">
+      </div>
+    </div>
+    <div class="shift-sel" id="shiftSel">
+      <button data-shift="rano" class="active">🌅 Ráno</button>
+      <button data-shift="vecer">🌙 Večer</button>
+    </div>
+    <div class="progress"><i id="progbar"></i></div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="prijem">Príjem tovaru</button>
+    <button class="tab" data-tab="teploty">Teploty</button>
+    <button class="tab" data-tab="sanitacia">Sanitácia</button>
+    <button class="tab" data-tab="info">Nápravné opatrenia</button>
+    <button class="tab" data-tab="historia" id="tab-historia-btn" style="grid-column:1/3">História</button>
+  </div>
+
+  <div id="printArea"></div>
+
+  <!-- PRÍJEM TOVARU -->
+  <section class="panel active" data-panel="prijem">
+    <div class="card supplier-list">
+      <h3>Príjem tovaru <span class="cnt" id="cnt-prijem"></span></h3>
+      <div id="suppliers"></div>
+      <div class="note-in">
+        <label class="fl">Vrátený tovar / poznámka</label>
+        <textarea id="prijem_note" placeholder="Konkrétna položka, dôvod neprevzatia…"></textarea>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:10px 0 0">
+        ✓ = tovar v poriadku, teplota OK &nbsp;·&nbsp; ✕ = vrátený / odchýlka
+      </p>
+    </div>
+  </section>
+
+  <!-- TEPLOTY -->
+  <section class="panel" data-panel="teploty">
+    <div class="card">
+      <h3>Mraziace zariadenia <span class="cnt" id="cnt-mraz"></span></h3>
+      <div id="mrazaky"></div>
+    </div>
+    <div class="card">
+      <h3>Chladiace zariadenia <span class="cnt" id="cnt-chlad"></span></h3>
+      <div id="chladnicky"></div>
+    </div>
+    <div class="card">
+      <h3>Suchý sklad <span class="cnt" id="cnt-sklad"></span></h3>
+      <div id="sklad"></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);text-align:center">
+      ✓ = v norme &nbsp;·&nbsp; ✕ = mimo normy (vyplň nápravné opatrenie nižšie)
+    </p>
+    <div class="card">
+      <label class="fl">Poznámka k odchýlkam</label>
+      <textarea id="teploty_note" placeholder="Zariadenie, zistená príčina, prijaté opatrenie…"></textarea>
+    </div>
+  </section>
+
+  <!-- SANITÁCIA -->
+  <section class="panel" data-panel="sanitacia">
+    <div class="card">
+      <h3>Denná sanitácia <span class="cnt" id="cnt-sanit"></span></h3>
+      <div id="sanitacia"></div>
+    </div>
+    <div class="card">
+      <label class="fl">Poznámka k sanitácii</label>
+      <textarea id="sanit_note" placeholder="Mimoriadne čistenie, poškodenie, výmena…"></textarea>
+    </div>
+  </section>
+
+  <!-- INFO / NÁPRAVNÉ OPATRENIA -->
+  <section class="panel" data-panel="info">
+    <details class="accordion" open>
+      <summary>Predpísané teplotné rozsahy</summary>
+      <div class="body">
+        <p><b>Mraziace zariadenia:</b> −18 °C a nižšie</p>
+        <p><b>Chladiace zariadenia:</b> 0 – 5 °C</p>
+        <p><b>Suchý sklad — teplota:</b> 15 – 20 °C</p>
+        <p><b>Suchý sklad — vlhkosť:</b> max. 70 %</p>
+        <p style="margin-top:6px;font-size:12px">Hodnoty kontroluj a zapisuj denne. Pri prekročení postupuj podľa nápravných opatrení nižšie.</p>
+      </div>
+    </details>
+    <details class="accordion">
+      <summary>Nápravné opatrenia — chladiace a mraziace zariadenia</summary>
+      <div class="body">
+        <p>Pri odchýlke od predpísanej teploty zistiť príčinu a čo najskôr ju odstrániť.</p>
+        <p><b>Krátkodobé zvýšenie</b> (napr. dlhé naskladňovanie) — uzavrieť zariadenie, nechať dostať teplotu na požadované hodnoty.</p>
+        <p><b>Porucha s dlhšou opravou</b> — informovať vedúceho, presunúť suroviny do náhradného zariadenia.</p>
+        <p>Po oprave zariadenie zapnúť, odskúšať funkčnosť, po dosiahnutí parametrov opätovne naskladniť. Sledovať dĺžku naskladňovania a funkčnosť.</p>
+      </div>
+    </details>
+    <details class="accordion">
+      <summary>Nápravné opatrenia — suchý sklad</summary>
+      <div class="body">
+        <p>Pri odchýlke teploty/vlhkosti zistiť príčinu a odstrániť ju. Vlhkosť zabezpečiť vetraním.</p>
+        <p>Pri výskyte hmyzu/hlodavcov informovať vedúceho — zabezpečí dezinsekciu a deratizáciu.</p>
+        <p>Pri poškodení obalu potraviny — vyradenie, oddelené uloženie.</p>
+      </div>
+    </details>
+    <details class="accordion">
+      <summary>Nápravné opatrenia — príjem surovín</summary>
+      <div class="body">
+        <p>Bez atestu o zdravotnej neškodnosti — neprevzatie, informovať dodávateľa.</p>
+        <p>Známky zdravotnej škodlivosti / narušenia kvality — reklamácia, vrátenie dodávateľovi.</p>
+        <p>Vizuálna kontrola — neprevziať tovar s poškodeným obalom či porušenou integritou balenia.</p>
+        <p>Pri nedodržaní teplotných podmienok pri preprave — tovar neprevziať.</p>
+      </div>
+    </details>
+    <details class="accordion">
+      <summary>Čistiace a dezinfekčné prostriedky</summary>
+      <div class="body">
+        <p><b>Čistiace:</b></p>
+        <div class="chips">
+          <span class="chip">Jar — podľa potreby</span>
+          <span class="chip">Abrasive cream (cif) — podľa potreby</span>
+          <span class="chip">Silná mastnota</span>
+        </div>
+        <p style="margin-top:12px"><b>Dezinfekčné:</b></p>
+        <div class="chips">
+          <span class="chip">Kristal universal (dez) — neriedený</span>
+          <span class="chip">Ocot — 0,1</span>
+          <span class="chip">Kristal sanan klasik (savo) — 0,05</span>
+        </div>
+        <p style="margin-top:12px">Všetky prostriedky riedené pitnou vodou ≥ 50 °C, doba pôsobenia podľa návodu výrobcu, opláchnutie pitnou vodou.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- HISTÓRIA -->
+  <section class="panel" data-panel="historia">
+    <div id="historyList"></div>
+  </section>
+
+</div>
+
+<div class="fab">
+  <div class="wrapb">
+    <button class="btn ghost" onclick="buildPrint();window.print()">🖨 Tlač / PDF</button>
+    <button class="btn primary" id="saveBtn">💾 Uložiť deň</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======== SUPABASE KONFIGURÁCIA ========
+   Vyplň podľa návodu (Settings → API v Supabase):  */
+const SUPABASE_URL = "https://mzwmhqabxkhfljgvafgk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_-ZTQAJNMMt0W9KtdjXWeAg_XfkjJZZT";
+/* ======================================== */
+
+let sb = null;
+const sbReady = (SUPABASE_URL && !SUPABASE_URL.includes("SEM_VLOZ")
+              && SUPABASE_KEY && !SUPABASE_KEY.includes("SEM_VLOZ"));
+if(sbReady && window.supabase){ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+
+const SUPPLIERS = ["Lunys","Bidfood","Lippek","Mäso Liptov","Del Italia"];
+const MRAZ = [
+  {n:"Mrazák 1",min:-99,max:-18},
+  {n:"Mrazák 2",min:-99,max:-18},
+  {n:"Mrazák 3",min:-99,max:-18}
+];
+const CHLAD = [
+  {n:"Chladnička 1",min:0,max:5},
+  {n:"Chladnička 2",min:0,max:5},
+  {n:"Chladnička 3",min:0,max:5},
+  {n:"Chladnička 4",min:0,max:5},
+  {n:"Chladnička 5",min:0,max:5},
+  {n:"Chladnička 6",min:0,max:5}
+];
+const SKLAD = [
+  {n:"Teplota suchého skladu",min:15,max:20,unit:"°C"},
+  {n:"Vlhkosť suchého skladu",min:0,max:70,unit:"%"}
+];
+const SANIT = [
+  ["Nerezové plochy a drezy","jar, dez"],
+  ["Chladiace a mraziace zariadenia","jar, dez"],
+  ["Podlahy","jar, mastnota, ocot"],
+  ["Suchý sklad","jar, mastnota, ocot"],
+  ["Regále v suchom sklade","senzorická kontrola"],
+  ["Dvere a kľučky (celá prevádzka)","kľučky – dezinfekcia"],
+  ["Odtokové kanále","pri väčšom znečistení"],
+  ["Odpadkové koše","po každej smene"],
+  ["Konvektomat","podľa potreby"],
+  ["Teplý pult / režón","po použití"],
+  ["Fritézy","podľa potreby"],
+  ["Nárezový stroj","podľa potreby"],
+  ["Sporáky","denne"],
+  ["Digestor","podľa potreby"],
+  ["Mikrovlnná rúra","po použití – jar, dez"],
+  ["Myčka riadu","denne – jar"],
+  ["Umývateľné plochy a obklady","po použití / znečistení"]
+];
+const KEY = "gt_bistro_hygiena";
+let state = blankState();
+
+function blankState(){
+  return {
+    datum:new Date().toISOString().slice(0,10), smena:"rano", osoba:"",
+    prijem:{}, prijem_note:"",
+    mraz:{}, chlad:{}, sklad:{}, teploty_note:"",
+    sanit:{}, sanit_note:""
+  };
+}
+
+/* ---- render rows ---- */
+function segRow(container,key,name,sub,store){
+  const row=document.createElement("div");row.className="row";
+  row.innerHTML=`<div class="name">${name}${sub?`<small>${sub}</small>`:""}</div>`;
+  const seg=document.createElement("div");seg.className="seg";
+  const ok=document.createElement("button");ok.textContent="✓";
+  const bad=document.createElement("button");bad.textContent="✕";
+  function paint(){
+    ok.className = store[key]==="ok"?"on-ok":"";
+    bad.className = store[key]==="bad"?"on-bad":"";
+  }
+  ok.onclick=()=>{store[key]=store[key]==="ok"?undefined:"ok";paint();update();};
+  bad.onclick=()=>{store[key]=store[key]==="bad"?undefined:"bad";paint();update();};
+  seg.appendChild(ok);seg.appendChild(bad);row.appendChild(seg);paint();
+  container.appendChild(row);
+}
+function chkRow(container,key,name,sub,store){
+  const row=document.createElement("div");row.className="row";
+  row.innerHTML=`<div class="name">${name}${sub?`<small>${sub}</small>`:""}</div>`;
+  const chk=document.createElement("div");chk.className="chk";chk.textContent="✓";
+  function paint(){chk.className="chk"+(store[key]?" on":"");}
+  chk.onclick=()=>{store[key]=store[key]?undefined:true;paint();update();};
+  row.appendChild(chk);paint();container.appendChild(row);
+}
+
+function tempRow(container,key,item,store){
+  const unit=item.unit||"°C";
+  const lo=item.min<=-99?"≤ "+item.max+" "+unit
+          :(item.unit==="%")?"≤ "+item.max+" "+unit
+          :item.min+" – "+item.max+" "+unit;
+  const row=document.createElement("div");row.className="row";
+  row.innerHTML=`<div class="name">${item.n}<span class="range">${lo}</span></div>`;
+  const seg=document.createElement("div");seg.className="seg";
+  const ok=document.createElement("button");ok.textContent="✓";
+  const bad=document.createElement("button");bad.textContent="✕";
+  function paint(){
+    ok.className = store[key]==="ok"?"on-ok":"";
+    bad.className = store[key]==="bad"?"on-bad":"";
+  }
+  ok.onclick=()=>{store[key]=store[key]==="ok"?undefined:"ok";paint();update();};
+  bad.onclick=()=>{store[key]=store[key]==="bad"?undefined:"bad";paint();update();};
+  seg.appendChild(ok);seg.appendChild(bad);row.appendChild(seg);paint();
+  container.appendChild(row);
+}
+
+function build(){
+  const sup=document.getElementById("suppliers");sup.innerHTML="";
+  SUPPLIERS.forEach((s,i)=>segRow(sup,"s"+i,s,"",state.prijem));
+  const mz=document.getElementById("mrazaky");mz.innerHTML="";
+  MRAZ.forEach((m,i)=>tempRow(mz,"m"+i,m,state.mraz));
+  const ch=document.getElementById("chladnicky");ch.innerHTML="";
+  CHLAD.forEach((c,i)=>tempRow(ch,"c"+i,c,state.chlad));
+  const sk=document.getElementById("sklad");sk.innerHTML="";
+  SKLAD.forEach((s,i)=>tempRow(sk,"k"+i,s,state.sklad));
+  const sa=document.getElementById("sanitacia");sa.innerHTML="";
+  SANIT.forEach((s,i)=>chkRow(sa,"sa"+i,s[0],s[1],state.sanit));
+}
+
+/* ---- bind meta + notes ---- */
+function paintShift(){
+  document.querySelectorAll("#shiftSel button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.shift===state.smena);
+  });
+}
+function bindInputs(){
+  const map={m_datum:"datum",m_osoba:"osoba",
+    prijem_note:"prijem_note",teploty_note:"teploty_note",sanit_note:"sanit_note"};
+  Object.entries(map).forEach(([id,k])=>{
+    const el=document.getElementById(id);
+    el.value=state[k]||"";
+    el.oninput=()=>{state[k]=el.value;update();};
+  });
+  paintShift();
+}
+
+/* ---- progress + counts ---- */
+function filled(o){return Object.keys(o).filter(k=>o[k]!==undefined&&o[k]!=="").length;}
+function update(){
+  const reqCounts=[
+    [state.prijem,SUPPLIERS.length],
+    [state.mraz,MRAZ.length],[state.chlad,CHLAD.length],[state.sklad,SKLAD.length],
+    [state.sanit,SANIT.length]
+  ];
+  let done=0,total=0;
+  reqCounts.forEach(([store,n])=>{total+=n;done+=filled(store);});
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById("progbar").style.width=pct+"%";
+  const c=(o,n)=>`${filled(o)}/${n}`;
+  document.getElementById("cnt-prijem").textContent=c(state.prijem,SUPPLIERS.length);
+  document.getElementById("cnt-mraz").textContent=c(state.mraz,MRAZ.length);
+  document.getElementById("cnt-chlad").textContent=c(state.chlad,CHLAD.length);
+  document.getElementById("cnt-sklad").textContent=c(state.sklad,SKLAD.length);
+  document.getElementById("cnt-sanit").textContent=c(state.sanit,SANIT.length);
+}
+
+/* ---- shift switch ---- */
+document.getElementById("shiftSel").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  state.smena=b.dataset.shift;paintShift();update();
+});
+
+/* ---- tabs ---- */
+document.getElementById("tabs").addEventListener("click",e=>{
+  const t=e.target.closest(".tab");if(!t)return;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  document.querySelector(`.panel[data-panel="${t.dataset.tab}"]`).classList.add("active");
+  if(t.dataset.tab==="historia")renderHistory();
+});
+
+/* ---- storage (Supabase + lokálna záloha) ---- */
+function localAll(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}}
+function localSave(a){try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){}}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2200);}
+
+async function cloudSave(rec){
+  const { error } = await sb.from("zaznamy")
+    .upsert({ datum: rec.datum, smena: rec.smena, osoba: rec.osoba||null, data: rec },
+            { onConflict: "datum,smena" });
+  if(error) throw error;
+}
+async function cloudLoad(){
+  const { data, error } = await sb.from("zaznamy")
+    .select("data").order("datum",{ascending:false});
+  if(error) throw error;
+  return (data||[]).map(r=>r.data);
+}
+async function cloudDelete(datum,smena){
+  const { error } = await sb.from("zaznamy").delete().eq("datum",datum).eq("smena",smena);
+  if(error) throw error;
+}
+
+document.getElementById("saveBtn").onclick=async()=>{
+  if(!state.datum){toast("Vyplň dátum");return;}
+  const rec=JSON.parse(JSON.stringify(state));
+  const lbl=rec.smena==="vecer"?"Večer":"Ráno";
+  // lokálna záloha vždy
+  const all=localAll();
+  const idx=all.findIndex(r=>r.datum===state.datum && r.smena===state.smena);
+  if(idx>=0)all[idx]=rec;else all.unshift(rec);
+  all.sort((a,b)=>b.datum.localeCompare(a.datum)||(a.smena||"").localeCompare(b.smena||""));
+  localSave(all);
+  if(!sb){toast("Uložené lokálne ("+state.datum+" · "+lbl+")");return;}
+  try{ await cloudSave(rec); toast("Uložené do cloudu ✓ ("+state.datum+" · "+lbl+")"); }
+  catch(e){ console.error(e);
+    const msg=(e&&(e.message||e.hint||e.code))?String(e.message||e.code):"neznáma chyba";
+    alert("Cloud chyba:\n"+msg+"\n\n(záznam je uložený lokálne)");
+    toast("⚠ Cloud chyba — pozri hlášku"); }
+};
+
+function pct(r){
+  let done=0,total=0;
+  [[r.prijem,SUPPLIERS.length],[r.mraz,MRAZ.length],[r.chlad,CHLAD.length],
+   [r.sklad,SKLAD.length],[r.sanit,SANIT.length]].forEach(([o,n])=>{
+    total+=n;done+=Object.keys(o).filter(k=>o[k]!==undefined&&o[k]!=="").length;});
+  return total?Math.round(done/total*100):0;
+}
+async function renderHistory(){
+  const box=document.getElementById("historyList");
+  box.innerHTML='<div class="empty">Načítavam…</div>';
+  let all=[];
+  if(sb){
+    try{ all=await cloudLoad(); localSave(all); }
+    catch(e){ console.error(e); all=localAll(); 
+      box.innerHTML='<div class="empty">⚠ Cloud nedostupný, zobrazujem lokálnu zálohu.</div>'; }
+  } else { all=localAll(); }
+  if(!all.length){box.innerHTML='<div class="empty">Zatiaľ žiadne uložené záznamy.</div>';return;}
+  box.innerHTML="";
+  all.forEach((r)=>{
+    const lbl=r.smena==="vecer"?"🌙 Večer":"🌅 Ráno";
+    const d=document.createElement("div");d.className="history-item";
+    d.innerHTML=`<div class="h"><span>${r.datum} · ${lbl}</span><span class="pct">${pct(r)}%</span></div>
+      <div style="color:var(--muted);font-size:12px;margin-top:3px">${r.osoba||"—"}</div>`;
+    const act=document.createElement("div");act.className="actions";
+    const open=document.createElement("button");open.textContent="Otvoriť";
+    open.onclick=()=>{state=JSON.parse(JSON.stringify(r));if(!state.smena)state.smena="rano";refresh();
+      document.querySelector('.tab[data-tab="prijem"]').click();toast("Načítané "+r.datum+" · "+lbl);};
+    const del=document.createElement("button");del.textContent="Zmazať";
+    del.onclick=async()=>{
+      if(!confirm("Zmazať záznam "+r.datum+" · "+lbl+"?"))return;
+      if(sb){try{await cloudDelete(r.datum,r.smena);}catch(e){toast("⚠ Nepodarilo sa zmazať z cloudu");return;}}
+      const a=localAll().filter(x=>!(x.datum===r.datum && x.smena===r.smena));localSave(a);
+      renderHistory();
+    };
+    act.appendChild(open);act.appendChild(del);d.appendChild(act);box.appendChild(d);
+  });
+}
+
+function refresh(){build();bindInputs();update();}
+
+/* ---- tlačový výstup (1 strana) ---- */
+function mark(v){return `<span class="mk ${v==='ok'?'ok':v==='bad'?'bad':''}">${v==='ok'?'✓':v==='bad'?'✕':''}</span>`;}
+function buildPrint(){
+  const lbl=state.smena==="vecer"?"Večer":"Ráno";
+  const esc=s=>(s||"").replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
+  let h=`<div class="pa-title">Hygienický a sanitačný program</div>
+  <div class="pa-sub">Hotel Demänová — denný kontrolný záznam</div>
+  <div class="pa-meta">
+    <span><b>Dátum:</b> ${esc(state.datum)}</span>
+    <span><b>Smena:</b> ${lbl}</span>
+    <span><b>Zodpovedná osoba:</b> ${esc(state.osoba)||"—"}</span>
+  </div><div class="pa-grid">`;
+
+  // Príjem tovaru
+  h+=`<div class="pa-card"><h4>Príjem tovaru</h4>`;
+  SUPPLIERS.forEach((s,i)=>{h+=`<div class="pa-row"><span>${s}</span>${mark(state.prijem["s"+i])}</div>`;});
+  h+=`</div>`;
+
+  // Mraziace
+  h+=`<div class="pa-card"><h4>Mraziace zariadenia</h4>`;
+  MRAZ.forEach((m,i)=>{h+=`<div class="pa-row"><span>${m.n}<span class="rng">≤ ${m.max} °C</span></span>${mark(state.mraz["m"+i])}</div>`;});
+  h+=`</div>`;
+
+  // Chladiace
+  h+=`<div class="pa-card"><h4>Chladiace zariadenia</h4>`;
+  CHLAD.forEach((c,i)=>{h+=`<div class="pa-row"><span>${c.n}<span class="rng">${c.min}–${c.max} °C</span></span>${mark(state.chlad["c"+i])}</div>`;});
+  h+=`</div>`;
+
+  // Suchý sklad
+  h+=`<div class="pa-card"><h4>Suchý sklad</h4>`;
+  SKLAD.forEach((s,i)=>{const r=s.unit==="%"?`≤ ${s.max} %`:`${s.min}–${s.max} °C`;
+    h+=`<div class="pa-row"><span>${s.n}<span class="rng">${r}</span></span>${mark(state.sklad["k"+i])}</div>`;});
+  h+=`</div>`;
+
+  // Sanitácia
+  h+=`<div class="pa-card"><h4>Denná sanitácia</h4>`;
+  SANIT.forEach((s,i)=>{h+=`<div class="pa-row"><span>${s[0]}</span>${mark(state.sanit["sa"+i]?'ok':'')}</div>`;});
+  h+=`</div>`;
+
+  h+=`</div>`; // koniec pa-grid
+
+  // Poznámky (ak vyplnené) — na plnú šírku pod gridom
+  const notes=[["Príjem / vrátený tovar",state.prijem_note],
+               ["Teploty — odchýlky",state.teploty_note],
+               ["Sanitácia",state.sanit_note]].filter(n=>n[1]&&n[1].trim());
+  if(notes.length){
+    h+=`<div class="pa-card" style="display:block"><h4>Poznámky</h4>`;
+    notes.forEach(n=>{h+=`<div class="pa-note"><b>${n[0]}:</b> ${esc(n[1])}</div>`;});
+    h+=`</div>`;
+  }
+
+  h+=`<div class="pa-sign"><span>Podpis: ____________________</span>
+    <span>Kontroloval: ____________________</span></div>`;
+  document.getElementById("printArea").innerHTML=h;
+}
+window.addEventListener("beforeprint",buildPrint);
+
+/* init */
+const dot=document.getElementById("cloudDot");
+if(sb){dot.textContent="● cloud";dot.style.color="var(--ok)";}
+else{dot.textContent="● lokálne";dot.style.color="var(--warn)";}
+dot.style.fontSize="11px";dot.style.marginLeft="6px";
+state.datum=new Date().toISOString().slice(0,10);
+refresh();
+</script>
+</body>
+</html>
